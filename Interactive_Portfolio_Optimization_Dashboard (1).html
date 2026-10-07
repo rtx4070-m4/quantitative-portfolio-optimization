@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interactive Portfolio Optimization Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f4f7fb;--panel:#fff;--panel2:#eef3f8;--text:#172033;--muted:#64748b;
+  --line:#dce4ee;--navy:#0b1f3a;--blue:#2563eb;--cyan:#0891b2;--green:#059669;
+  --amber:#d97706;--red:#dc2626;--purple:#7c3aed;--shadow:0 10px 28px rgba(15,23,42,.08);
+}
+[data-theme="dark"]{
+  --bg:#08111f;--panel:#0f1b2d;--panel2:#142238;--text:#e6edf7;--muted:#9aabc0;
+  --line:#24344a;--navy:#071426;--blue:#60a5fa;--cyan:#22d3ee;--green:#34d399;
+  --amber:#f59e0b;--red:#f87171;--purple:#a78bfa;--shadow:0 12px 30px rgba(0,0,0,.28);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+button,select,input{font:inherit}
+button{cursor:pointer}
+.nav{position:sticky;top:0;z-index:1000;background:color-mix(in srgb,var(--navy) 94%,transparent);color:#fff;border-bottom:1px solid rgba(255,255,255,.1);backdrop-filter:blur(12px)}
+.nav-inner{max-width:1500px;margin:auto;display:flex;align-items:center;gap:16px;padding:10px 20px}
+.brand{font-weight:800;letter-spacing:.2px;white-space:nowrap}
+.navlinks{display:flex;gap:6px;overflow:auto;flex:1}
+.navlinks a{color:#dbeafe;text-decoration:none;font-size:12px;padding:8px 10px;border-radius:8px;white-space:nowrap}
+.navlinks a:hover,.navlinks a.active{background:rgba(255,255,255,.12);color:#fff}
+.nav-actions{display:flex;gap:7px}
+.iconbtn,.btn{border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:9px;padding:8px 11px;font-weight:700}
+.nav .iconbtn{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.18);color:#fff}
+.container{max-width:1500px;margin:auto;padding:22px}
+.hero{background:linear-gradient(135deg,#071a31,#12355a 55%,#0f766e);color:#fff;border-radius:22px;padding:34px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.hero:after{content:"";position:absolute;width:420px;height:420px;border:1px solid rgba(255,255,255,.12);border-radius:50%;right:-120px;top:-170px;box-shadow:0 0 0 70px rgba(255,255,255,.03),0 0 0 140px rgba(255,255,255,.02)}
+.eyebrow{font-size:12px;letter-spacing:1.6px;text-transform:uppercase;opacity:.78;font-weight:800}
+.hero h1{font-size:clamp(28px,4vw,54px);line-height:1.02;max-width:1000px;margin:12px 0}
+.hero p{max-width:900px;color:#d9e8f7;line-height:1.6}
+.hero-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.hero .btn{background:#fff;color:#0b1f3a;border:none}
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-top:20px}
+.kpi{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);border-radius:14px;padding:14px}
+.kpi .v{font-size:24px;font-weight:900}.kpi .l{font-size:11px;color:#d9e8f7;margin-top:3px}
+section{scroll-margin-top:80px;margin-top:26px}
+.section-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-bottom:13px}
+.section-head h2{margin:0;font-size:24px}.section-head p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.grid{display:grid;gap:14px}.g2{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--shadow);min-width:0}
+.card h3{margin:0 0 10px;font-size:16px}.muted{color:var(--muted)}.small{font-size:12px}.tiny{font-size:11px}
+.controlbar{display:flex;flex-wrap:wrap;gap:9px;align-items:center}
+select,input[type="text"],input[type="number"]{border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:9px;padding:9px 11px;min-height:40px}
+.periods{display:flex;flex-wrap:wrap;gap:7px}
+.period-btn{border:1px solid var(--line);background:var(--panel);color:var(--text);padding:9px 14px;border-radius:10px;font-weight:800}
+.period-btn.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.metric{display:flex;justify-content:space-between;align-items:flex-start}.metric .num{font-size:30px;font-weight:900}.metric .tag{font-size:10px;font-weight:900;text-transform:uppercase;padding:5px 7px;border-radius:99px;background:var(--panel2);color:var(--muted)}
+.chart-wrap{height:360px;position:relative}.chart-wrap.small{height:290px}.chart-wrap.tall{height:470px}
+table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:9px 8px;border-bottom:1px solid var(--line);text-align:left}th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;position:sticky;top:0;background:var(--panel)}tr:hover td{background:var(--panel2)}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:4px 7px;border-radius:999px;background:var(--panel2);font-size:10px;font-weight:800}.good{color:var(--green)}.warn{color:var(--amber)}.bad{color:var(--red)}
+.note{padding:12px 14px;background:var(--panel2);border-left:4px solid var(--blue);border-radius:10px;line-height:1.55;font-size:13px}
+.warning{border-left-color:var(--amber)}.danger{border-left-color:var(--red)}
+.tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}.tab{padding:8px 12px;border:1px solid var(--line);border-radius:9px;background:var(--panel);font-weight:800;color:var(--text)}.tab.active{background:var(--navy);color:#fff}
+.formula{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--panel2);padding:14px;border-radius:10px;font-size:15px}
+.flow{display:flex;align-items:stretch;gap:8px;overflow:auto;padding:8px 2px}.flow-step{min-width:145px;background:var(--panel2);border:1px solid var(--line);padding:14px;border-radius:12px}.arrow{align-self:center;font-size:22px;color:var(--blue)}
+.heat{display:grid;grid-template-columns:170px repeat(4,1fr);gap:2px;background:var(--line);border:1px solid var(--line);overflow:auto;border-radius:10px}.heat div{padding:9px;background:var(--panel);font-size:11px}.heat .head{font-weight:900;background:var(--panel2)}.heat .cell{cursor:pointer;text-align:center;font-weight:800}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--muted)}.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px}
+.details{min-height:70px}.hide{display:none!important}
+.table-scroll{max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:10px}
+footer{margin:35px 0 10px;color:var(--muted);font-size:12px;text-align:center}
+.modal{position:fixed;inset:0;background:rgba(2,6,23,.68);display:flex;align-items:center;justify-content:center;z-index:3000;padding:18px}
+.modal-box{max-width:800px;width:100%;max-height:85vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:0 30px 80px rgba(0,0,0,.35)}
+.modal-head{display:flex;justify-content:space-between;align-items:center}.modal-head h3{margin:0}.close{border:none;background:transparent;color:var(--muted);font-size:25px}
+.presentation .nav{display:none}.presentation .container{max-width:1700px}.presentation section{margin-top:38px}.presentation .card{box-shadow:none}
+.viva-q{width:100%;text-align:left;border:1px solid var(--line);background:var(--panel);padding:12px;border-radius:10px;margin:6px 0;color:var(--text);font-weight:800}.viva-a{display:none;padding:0 12px 12px;color:var(--muted);line-height:1.55}.viva-q.open + .viva-a{display:block}
+.progress{position:fixed;left:0;top:0;height:3px;background:var(--cyan);z-index:5000;width:0}
+@media(max-width:1100px){.kpis{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:760px){.container{padding:13px}.navlinks{display:none}.nav-inner{padding:9px 12px}.hero{padding:24px 20px}.kpis,.g2,.g3,.g4{grid-template-columns:1fr}.chart-wrap{height:300px}.chart-wrap.tall{height:380px}.section-head{display:block}.flow{overflow-x:auto}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="brand">Quant Portfolio Lab</div>
+    <div class="navlinks">
+      <a href="#overview">Overview</a><a href="#period">Periods</a><a href="#weights">Weights</a><a href="#stocks">Stocks</a>
+      <a href="#riskreturn">Risk–Return</a><a href="#method">Methodology</a><a href="#optimization">Optimization</a>
+      <a href="#risk">Risk</a><a href="#viva">Viva</a><a href="#data">Data</a>
+    </div>
+    <div class="nav-actions">
+      <button class="iconbtn" id="themeBtn" title="Toggle theme">☾</button>
+      <button class="iconbtn" id="presentBtn" title="Presentation mode">⛶</button>
+    </div>
+  </div>
+</nav>
+
+<main class="container">
+<section class="hero" id="overview">
+  <div class="eyebrow">Quantitative Analytics • NSE/BSE • Maximum Sharpe Ratio</div>
+  <h1>Interactive Stock Portfolio Optimization Dashboard</h1>
+  <p>Risk–return analysis, maximum-Sharpe optimization and cross-horizon portfolio allocation using the supplied project outputs. Built as an analytical presentation layer over the original R workflow and exported results.</p>
+  <div class="hero-actions">
+    <button class="btn" onclick="document.getElementById('period').scrollIntoView()">Explore Portfolio</button>
+    <button class="btn" onclick="openModal('aboutModal')">How to use</button>
+    <button class="btn" id="exportSummary">Export Summary CSV</button>
+  </div>
+  <div class="kpis" id="heroKpis"></div>
+</section>
+
+<section id="period">
+  <div class="section-head"><div><h2>01. Portfolio Overview</h2><p>Change the look-back horizon and the analytical view updates without reloading the page.</p></div></div>
+  <div class="card">
+    <div class="controlbar">
+      <strong>Time Horizon</strong>
+      <div class="periods" id="periodBtns"></div>
+      <label class="small">Chart
+        <select id="comparisonChartType"><option>Bar</option><option>Line</option></select>
+      </label>
+    </div>
+  </div>
+  <div class="grid g4" style="margin-top:14px" id="metricCards"></div>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="card"><h3>Expected Return by Horizon</h3><div class="chart-wrap"><canvas id="returnChart"></canvas></div></div>
+    <div class="card"><h3>Risk & Sharpe by Horizon</h3><div class="chart-wrap"><canvas id="riskSharpeChart"></canvas></div></div>
+  </div>
+</section>
+
+<section id="weights">
+  <div class="section-head"><div><h2>02. Optimized Portfolio Weights</h2><p>Interactive replacement for the supplied static “Optimized Portfolio Weights Across Time Frames” chart.</p></div></div>
+  <div class="card">
+    <div class="controlbar">
+      <label>View <select id="weightView"><option value="grouped">Grouped Bar</option><option value="stacked">Stacked Bar</option><option value="heatmap">Heatmap</option><option value="table">Table</option></select></label>
+      <label>Stock <select id="weightStock"></select></label>
+      <label>Filter <select id="weightFilter"><option value="nonzero">Non-zero only</option><option value="all">All supplied weights</option></select></label>
+      <label>Top <select id="weightTop"><option value="all">All</option><option value="5">Top 5</option><option value="10">Top 10</option></select></label>
+      <button class="btn" id="resetWeight">Reset</button>
+    </div>
+  </div>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="card"><h3>Weight Allocation</h3><div class="chart-wrap tall" id="weightVisual"><canvas id="weightChart"></canvas></div></div>
+    <div class="card"><h3>Selected Stock — Weight Across Horizons</h3><div id="weightDetail" class="details"></div><div class="chart-wrap small"><canvas id="stockWeightChart"></canvas></div></div>
+  </div>
+  <div class="card" style="margin-top:14px"><h3>Weight Heatmap</h3><div id="heatmap"></div></div>
+</section>
+
+<section id="stocks">
+  <div class="section-head"><div><h2>03. Stock-Level Analysis</h2><p>Explore return, volatility and Sharpe statistics for all supplied stock summaries.</p></div></div>
+  <div class="card">
+    <div class="controlbar">
+      <label>Period <select id="stockPeriod"></select></label>
+      <label>Stock <select id="stockSelect"></select></label>
+      <label>Sector <select id="sectorSelect"><option value="all">All sectors</option></select></label>
+      <label>Search <input id="stockSearch" type="text" placeholder="Search stock"></label>
+    </div>
+  </div>
+  <div class="grid g4" style="margin-top:14px" id="stockCards"></div>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="card"><h3>Risk–Return Scatter</h3><div class="chart-wrap tall"><canvas id="scatterChart"></canvas></div></div>
+    <div class="card"><h3>Sharpe Ranking</h3><div class="table-scroll"><table id="rankTable"></table></div></div>
+  </div>
+</section>
+
+<section id="riskreturn">
+  <div class="section-head"><div><h2>04. Risk–Return & Diversification</h2><p>Derived views are explicitly labelled when they are calculated from supplied outputs.</p></div></div>
+  <div class="grid g3">
+    <div class="card"><h3>Portfolio Concentration</h3><div id="concentration"></div></div>
+    <div class="card"><h3>Top Holding</h3><div id="topHolding"></div></div>
+    <div class="card"><h3>Number of Holdings</h3><div id="holdingsCount"></div></div>
+  </div>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="card"><h3>Portfolio Composition</h3><div class="chart-wrap"><canvas id="donutChart"></canvas></div></div>
+    <div class="card"><h3>Weight Change: 10Y → 1Y</h3><div class="table-scroll"><table id="changeTable"></table></div></div>
+  </div>
+  <div class="note warning" style="margin-top:14px"><strong>Diversification note:</strong> The supplied workbook contains daily return data, but the exported portfolio results do not include a separate covariance/correlation matrix for every horizon. The dashboard therefore does not invent one. Concentration metrics shown here are derived directly from the supplied optimized weights.</div>
+</section>
+
+<section id="method">
+  <div class="section-head"><div><h2>05. Methodology</h2><p>Interactive representation of the supplied R workflow.</p></div></div>
+  <div class="card">
+    <div class="flow" id="methodFlow"></div>
+  </div>
+  <div class="grid g3" style="margin-top:14px">
+    <div class="card"><h3>Data</h3><p class="muted">Historical adjusted prices were downloaded through the R workflow using Yahoo Finance. The supplied stock universe contains 34 tickers across multiple industries.</p></div>
+    <div class="card"><h3>Returns & Risk</h3><p class="muted">Daily discrete returns are transformed into annualized expected return and volatility using 252 trading days.</p></div>
+    <div class="card"><h3>Optimization</h3><p class="muted">Top-five stocks by Sharpe Ratio are selected for each horizon, then non-negative fully-invested weights are optimized using quadratic programming.</p></div>
+  </div>
+</section>
+
+<section id="optimization">
+  <div class="section-head"><div><h2>06. Optimization & Mathematics</h2><p>Click “Explain” to see a viva-friendly interpretation.</p></div></div>
+  <div class="grid g2">
+    <div class="card"><h3>Annualized Expected Return</h3><div class="formula">μ = mean(daily returns) × 252</div><button class="btn explain" data-title="Expected Return" data-text="The average daily return is annualized using approximately 252 trading days. It is an historical estimate, not a forecast guarantee.">Explain</button></div>
+    <div class="card"><h3>Annualized Risk</h3><div class="formula">σ = SD(daily returns) × √252</div><button class="btn explain" data-title="Risk / Volatility" data-text="Annualized volatility scales daily standard deviation by the square root of 252. Higher volatility means larger historical variability of returns.">Explain</button></div>
+    <div class="card"><h3>Sharpe Ratio</h3><div class="formula">Sharpe = (μ − Rf) / σ</div><button class="btn explain" data-title="Sharpe Ratio" data-text="The Sharpe Ratio measures excess expected return per unit of portfolio volatility. In this project the risk-free rate is 6%.">Explain</button></div>
+    <div class="card"><h3>Optimization Constraints</h3><div class="formula">Σwi = 1 &nbsp;&nbsp; and &nbsp;&nbsp; wi ≥ 0</div><button class="btn explain" data-title="Constraints" data-text="The portfolio is fully invested and short selling is not permitted. Every weight is non-negative and all weights sum to 100%.">Explain</button></div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <h3>Optimization Logic</h3>
+    <div class="note">Maximize <strong>(Portfolio Return − Risk-Free Rate) / Portfolio Risk</strong>, subject to full investment and no short selling. The R script uses quadratic programming and then removes tiny weights below 0.5% before re-normalizing the remaining weights.</div>
+  </div>
+</section>
+
+<section id="risk">
+  <div class="section-head"><div><h2>07. Risk Analysis & Interpretation</h2><p>Risk cards summarize the limitations and interpretation in the supplied report.</p></div></div>
+  <div class="grid g3" id="riskCards"></div>
+</section>
+
+<section id="recommend">
+  <div class="section-head"><div><h2>08. Analytical Recommendation Engine</h2><p>Interpretation changes with the selected horizon; this is not personalized investment advice.</p></div></div>
+  <div class="grid g2">
+    <div class="card"><h3>Selected Horizon Interpretation</h3><div id="recommendation" class="note"></div></div>
+    <div class="card"><h3>Best Historical Risk-Adjusted Portfolio</h3><div id="bestPortfolio"></div></div>
+  </div>
+  <div class="card" style="margin-top:14px"><h3>Historical Horizon Comparison</h3><table id="comparisonTable"></table></div>
+</section>
+
+<section id="viva">
+  <div class="section-head"><div><h2>09. Viva / Exam Mode</h2><p>Click a question to reveal a concise defence-ready answer.</p></div></div>
+  <div class="card" id="vivaBox"></div>
+</section>
+
+<section id="data">
+  <div class="section-head"><div><h2>10. Data, Assumptions & Transparency</h2><p>Source-derived facts are kept separate from dashboard-derived metrics.</p></div></div>
+  <div class="grid g4">
+    <div class="card"><h3>Data Source</h3><strong>Yahoo Finance</strong><p class="muted small">As stated in the supplied report and R workflow.</p></div>
+    <div class="card"><h3>Universe</h3><strong>34 stocks</strong><p class="muted small">NSE/BSE, multiple industries.</p></div>
+    <div class="card"><h3>Risk-Free Rate</h3><strong>6%</strong><p class="muted small">Used in the Sharpe calculation and optimization.</p></div>
+    <div class="card"><h3>Method</h3><strong>Quadratic Programming</strong><p class="muted small">Maximum Sharpe Ratio; no short selling.</p></div>
+  </div>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="card">
+      <h3>Important Limitations</h3>
+      <div class="note warning">Historical return, volatility and correlation estimates may not persist. Shorter windows can be more sensitive to recent market conditions. Optimized portfolios can become concentrated, and future market conditions may differ substantially from the historical sample.</div>
+      <div class="note danger" style="margin-top:10px"><strong>Financial disclaimer:</strong> This is an academic quantitative analysis of historical data. It is not personalized investment advice and does not guarantee future performance.</div>
+    </div>
+    <div class="card">
+      <h3>Source Hierarchy Used by This Dashboard</h3>
+      <ol class="muted small">
+        <li>Uploaded Excel analytical outputs</li>
+        <li>Uploaded period-specific CSV summaries</li>
+        <li>Uploaded R script and reported methodology</li>
+        <li>Uploaded report/PPTX/chart for interpretation and presentation context</li>
+      </ol>
+      <p class="small muted">Where the report rounds a value differently from the workbook, the dashboard uses the workbook's stored numerical value and displays it to two decimals.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  Quantitative Stock Portfolio Analysis • Risk–Return Optimization Using Maximum Sharpe Ratio • Academic Dashboard
+</footer>
+</main>
+
+<div class="modal hide" id="modal"><div class="modal-box"><div class="modal-head"><h3 id="modalTitle"></h3><button class="close" onclick="closeModal()">×</button></div><div id="modalBody" style="margin-top:12px;line-height:1.6"></div></div></div>
+
+<script>
+const DATA = {"metrics":{"10yr":{"Return":25.75,"Risk":22.24,"Sharpe":0.888},"5yr":{"Return":20.82,"Risk":15.15,"Sharpe":0.978},"3yr":{"Return":29.96,"Risk":17.82,"Sharpe":1.344},"1yr":{"Return":25.66,"Risk":16.36,"Sharpe":1.201}},"weights":{"10yr":[{"Stock":"DIVISLAB.NS","Weight":0.3481},{"Stock":"ICICIBANK.NS","Weight":0.34},{"Stock":"JSWSTEEL.NS","Weight":0.1739},{"Stock":"BAJFINANCE.NS","Weight":0.1257},{"Stock":"ADANIENT.NS","Weight":0.0123}],"5yr":[{"Stock":"SUNPHARMA.NS","Weight":0.4313},{"Stock":"BAJAJ.AUTO.NS","Weight":0.1989},{"Stock":"SBIN.NS","Weight":0.1979},{"Stock":"LT.NS","Weight":0.1292},{"Stock":"M.M.NS","Weight":0.0426}],"3yr":[{"Stock":"DIVISLAB.NS","Weight":0.3174},{"Stock":"BAJAJ.AUTO.NS","Weight":0.2016},{"Stock":"HEROMOTOCO.NS","Weight":0.1938},{"Stock":"BPCL.NS","Weight":0.1466},{"Stock":"HINDALCO.NS","Weight":0.1406}],"1yr":[{"Stock":"DIVISLAB.NS","Weight":0.2878},{"Stock":"SBIN.NS","Weight":0.2788},{"Stock":"BAJAJ.AUTO.NS","Weight":0.2485},{"Stock":"HINDALCO.NS","Weight":0.1701},{"Stock":"ADANIENT.NS","Weight":0.0148}]},"stocks":{"10yr":[{"Stock":"ADANIENT.NS","Annual_Return_Pct":57.39,"Annual_Risk_Pct":50.55,"Sharpe_Ratio":1.017,"Risk_Return_Ratio":1.135,"Daily_Sharpe":0.064},{"Stock":"BAJFINANCE.NS","Annual_Return_Pct":29.23,"Annual_Risk_Pct":35.55,"Sharpe_Ratio":0.653,"Risk_Return_Ratio":0.822,"Daily_Sharpe":0.0412},{"Stock":"DIVISLAB.NS","Annual_Return_Pct":26.09,"Annual_Risk_Pct":31.66,"Sharpe_Ratio":0.635,"Risk_Return_Ratio":0.824,"Daily_Sharpe":0.04},{"Stock":"JSWSTEEL.NS","Annual_Return_Pct":26.15,"Annual_Risk_Pct":32.87,"Sharpe_Ratio":0.613,"Risk_Return_Ratio":0.796,"Daily_Sharpe":0.0386},{"Stock":"ICICIBANK.NS","Annual_Return_Pct":22.91,"Annual_Risk_Pct":29.18,"Sharpe_Ratio":0.579,"Risk_Return_Ratio":0.785,"Daily_Sharpe":0.0365},{"Stock":"NESTLEIND.NS","Annual_Return_Pct":17.61,"Annual_Risk_Pct":21.94,"Sharpe_Ratio":0.529,"Risk_Return_Ratio":0.803,"Daily_Sharpe":0.0333},{"Stock":"HINDALCO.NS","Annual_Return_Pct":25.52,"Annual_Risk_Pct":36.96,"Sharpe_Ratio":0.528,"Risk_Return_Ratio":0.691,"Daily_Sharpe":0.0333},{"Stock":"RELIANCE.NS","Annual_Return_Pct":20.03,"Annual_Risk_Pct":27.08,"Sharpe_Ratio":0.518,"Risk_Return_Ratio":0.74,"Daily_Sharpe":0.0326},{"Stock":"TATASTEEL.NS","Annual_Return_Pct":23.94,"Annual_Risk_Pct":34.63,"Sharpe_Ratio":0.518,"Risk_Return_Ratio":0.691,"Daily_Sharpe":0.0326},{"Stock":"TECHM.NS","Annual_Return_Pct":20.85,"Annual_Risk_Pct":29.2,"Sharpe_Ratio":0.509,"Risk_Return_Ratio":0.714,"Daily_Sharpe":0.032},{"Stock":"BAJAJ.AUTO.NS","Annual_Return_Pct":18.62,"Annual_Risk_Pct":25.46,"Sharpe_Ratio":0.496,"Risk_Return_Ratio":0.731,"Daily_Sharpe":0.0312},{"Stock":"LT.NS","Annual_Return_Pct":18.87,"Annual_Risk_Pct":26.16,"Sharpe_Ratio":0.492,"Risk_Return_Ratio":0.721,"Daily_Sharpe":0.031},{"Stock":"M.M.NS","Annual_Return_Pct":20.15,"Annual_Risk_Pct":30.56,"Sharpe_Ratio":0.463,"Risk_Return_Ratio":0.659,"Daily_Sharpe":0.0292},{"Stock":"HCLTECH.NS","Annual_Return_Pct":17.6,"Annual_Risk_Pct":26.61,"Sharpe_Ratio":0.436,"Risk_Return_Ratio":0.661,"Daily_Sharpe":0.0275},{"Stock":"SBIN.NS","Annual_Return_Pct":19.57,"Annual_Risk_Pct":31.79,"Sharpe_Ratio":0.427,"Risk_Return_Ratio":0.616,"Daily_Sharpe":0.0269},{"Stock":"BRITANNIA.NS","Annual_Return_Pct":14.71,"Annual_Risk_Pct":22.87,"Sharpe_Ratio":0.381,"Risk_Return_Ratio":0.643,"Daily_Sharpe":0.024},{"Stock":"KOTAKBANK.NS","Annual_Return_Pct":13.5,"Annual_Risk_Pct":26.05,"Sharpe_Ratio":0.288,"Risk_Return_Ratio":0.518,"Daily_Sharpe":0.0181},{"Stock":"INFY.NS","Annual_Return_Pct":13.53,"Annual_Risk_Pct":27.04,"Sharpe_Ratio":0.278,"Risk_Return_Ratio":0.5,"Daily_Sharpe":0.0175},{"Stock":"SUNPHARMA.NS","Annual_Return_Pct":13.39,"Annual_Risk_Pct":27.4,"Sharpe_Ratio":0.27,"Risk_Return_Ratio":0.489,"Daily_Sharpe":0.017},{"Stock":"BPCL.NS","Annual_Return_Pct":14.92,"Annual_Risk_Pct":33.63,"Sharpe_Ratio":0.265,"Risk_Return_Ratio":0.444,"Daily_Sharpe":0.0167},{"Stock":"HINDUNILVR.NS","Annual_Return_Pct":11.63,"Annual_Risk_Pct":22.0,"Sharpe_Ratio":0.256,"Risk_Return_Ratio":0.528,"Daily_Sharpe":0.0161},{"Stock":"CIPLA.NS","Annual_Return_Pct":12.51,"Annual_Risk_Pct":25.67,"Sharpe_Ratio":0.254,"Risk_Return_Ratio":0.487,"Daily_Sharpe":0.016},{"Stock":"AXISBANK.NS","Annual_Return_Pct":13.88,"Annual_Risk_Pct":32.04,"Sharpe_Ratio":0.246,"Risk_Return_Ratio":0.433,"Daily_Sharpe":0.0155},{"Stock":"HDFCBANK.NS","Annual_Return_Pct":11.65,"Annual_Risk_Pct":23.08,"Sharpe_Ratio":0.245,"Risk_Return_Ratio":0.505,"Daily_Sharpe":0.0154},{"Stock":"IOC.NS","Annual_Return_Pct":13.23,"Annual_Risk_Pct":30.01,"Sharpe_Ratio":0.241,"Risk_Return_Ratio":0.441,"Daily_Sharpe":0.0152},{"Stock":"TCS.BO","Annual_Return_Pct":16.16,"Annual_Risk_Pct":43.1,"Sharpe_Ratio":0.236,"Risk_Return_Ratio":0.375,"Daily_Sharpe":0.0148},{"Stock":"ONGC.NS","Annual_Return_Pct":13.19,"Annual_Risk_Pct":32.98,"Sharpe_Ratio":0.218,"Risk_Return_Ratio":0.4,"Daily_Sharpe":0.0137},{"Stock":"TCS.NS","Annual_Return_Pct":11.28,"Annual_Risk_Pct":24.28,"Sharpe_Ratio":0.217,"Risk_Return_Ratio":0.465,"Daily_Sharpe":0.0137},{"Stock":"MARUTI.NS","Annual_Return_Pct":11.92,"Annual_Risk_Pct":27.48,"Sharpe_Ratio":0.215,"Risk_Return_Ratio":0.434,"Daily_Sharpe":0.0136},{"Stock":"MARUTI.BO","Annual_Return_Pct":11.92,"Annual_Risk_Pct":27.53,"Sharpe_Ratio":0.215,"Risk_Return_Ratio":0.433,"Daily_Sharpe":0.0135},{"Stock":"DRREDDY.NS","Annual_Return_Pct":10.8,"Annual_Risk_Pct":25.58,"Sharpe_Ratio":0.187,"Risk_Return_Ratio":0.422,"Daily_Sharpe":0.0118},{"Stock":"HEROMOTOCO.NS","Annual_Return_Pct":11.15,"Annual_Risk_Pct":28.18,"Sharpe_Ratio":0.183,"Risk_Return_Ratio":0.396,"Daily_Sharpe":0.0115},{"Stock":"WIPRO.NS","Annual_Return_Pct":10.62,"Annual_Risk_Pct":26.3,"Sharpe_Ratio":0.176,"Risk_Return_Ratio":0.404,"Daily_Sharpe":0.0111},{"Stock":"ITC.NS","Annual_Return_Pct":8.09,"Annual_Risk_Pct":23.84,"Sharpe_Ratio":0.088,"Risk_Return_Ratio":0.339,"Daily_Sharpe":0.0055}],"5yr":[{"Stock":"M.M.NS","Annual_Return_Pct":29.01,"Annual_Risk_Pct":27.94,"Sharpe_Ratio":0.824,"Risk_Return_Ratio":1.038,"Daily_Sharpe":0.0519},{"Stock":"BAJAJ.AUTO.NS","Annual_Return_Pct":25.11,"Annual_Risk_Pct":24.45,"Sharpe_Ratio":0.782,"Risk_Return_Ratio":1.027,"Daily_Sharpe":0.0493},{"Stock":"SUNPHARMA.NS","Annual_Return_Pct":18.83,"Annual_Risk_Pct":19.94,"Sharpe_Ratio":0.643,"Risk_Return_Ratio":0.944,"Daily_Sharpe":0.0405},{"Stock":"SBIN.NS","Annual_Return_Pct":19.96,"Annual_Risk_Pct":24.53,"Sharpe_Ratio":0.569,"Risk_Return_Ratio":0.814,"Daily_Sharpe":0.0359},{"Stock":"LT.NS","Annual_Return_Pct":19.96,"Annual_Risk_Pct":24.61,"Sharpe_Ratio":0.567,"Risk_Return_Ratio":0.811,"Daily_Sharpe":0.0357},{"Stock":"HEROMOTOCO.NS","Annual_Return_Pct":18.82,"Annual_Risk_Pct":25.84,"Sharpe_Ratio":0.496,"Risk_Return_Ratio":0.728,"Daily_Sharpe":0.0313},{"Stock":"ICICIBANK.NS","Annual_Return_Pct":15.91,"Annual_Risk_Pct":20.22,"Sharpe_Ratio":0.49,"Risk_Return_Ratio":0.787,"Daily_Sharpe":0.0309},{"Stock":"IOC.NS","Annual_Return_Pct":18.0,"Annual_Risk_Pct":27.53,"Sharpe_Ratio":0.436,"Risk_Return_Ratio":0.654,"Daily_Sharpe":0.0275},{"Stock":"HINDALCO.NS","Annual_Return_Pct":19.91,"Annual_Risk_Pct":32.23,"Sharpe_Ratio":0.431,"Risk_Return_Ratio":0.618,"Daily_Sharpe":0.0272},{"Stock":"JSWSTEEL.NS","Annual_Return_Pct":17.44,"Annual_Risk_Pct":27.3,"Sharpe_Ratio":0.419,"Risk_Return_Ratio":0.639,"Daily_Sharpe":0.0264},{"Stock":"DIVISLAB.NS","Annual_Return_Pct":16.45,"Annual_Risk_Pct":26.95,"Sharpe_Ratio":0.388,"Risk_Return_Ratio":0.61,"Daily_Sharpe":0.0244},{"Stock":"ADANIENT.NS","Annual_Return_Pct":24.73,"Annual_Risk_Pct":48.44,"Sharpe_Ratio":0.387,"Risk_Return_Ratio":0.511,"Daily_Sharpe":0.0244},{"Stock":"ONGC.NS","Annual_Return_Pct":17.58,"Annual_Risk_Pct":30.16,"Sharpe_Ratio":0.384,"Risk_Return_Ratio":0.583,"Daily_Sharpe":0.0242},{"Stock":"BPCL.NS","Annual_Return_Pct":14.26,"Annual_Risk_Pct":28.85,"Sharpe_Ratio":0.286,"Risk_Return_Ratio":0.494,"Daily_Sharpe":0.018},{"Stock":"MARUTI.NS","Annual_Return_Pct":12.69,"Annual_Risk_Pct":23.48,"Sharpe_Ratio":0.285,"Risk_Return_Ratio":0.54,"Daily_Sharpe":0.0179},{"Stock":"MARUTI.BO","Annual_Return_Pct":12.69,"Annual_Risk_Pct":23.5,"Sharpe_Ratio":0.285,"Risk_Return_Ratio":0.54,"Daily_Sharpe":0.0179},{"Stock":"TATASTEEL.NS","Annual_Return_Pct":14.03,"Annual_Risk_Pct":30.17,"Sharpe_Ratio":0.266,"Risk_Return_Ratio":0.465,"Daily_Sharpe":0.0168},{"Stock":"AXISBANK.NS","Annual_Return_Pct":12.2,"Annual_Risk_Pct":24.33,"Sharpe_Ratio":0.255,"Risk_Return_Ratio":0.502,"Daily_Sharpe":0.0161},{"Stock":"CIPLA.NS","Annual_Return_Pct":11.13,"Annual_Risk_Pct":22.85,"Sharpe_Ratio":0.225,"Risk_Return_Ratio":0.487,"Daily_Sharpe":0.0142},{"Stock":"ITC.NS","Annual_Return_Pct":9.96,"Annual_Risk_Pct":20.06,"Sharpe_Ratio":0.197,"Risk_Return_Ratio":0.496,"Daily_Sharpe":0.0124},{"Stock":"NESTLEIND.NS","Annual_Return_Pct":9.37,"Annual_Risk_Pct":19.21,"Sharpe_Ratio":0.175,"Risk_Return_Ratio":0.488,"Daily_Sharpe":0.011},{"Stock":"BAJFINANCE.NS","Annual_Return_Pct":9.21,"Annual_Risk_Pct":28.51,"Sharpe_Ratio":0.113,"Risk_Return_Ratio":0.323,"Daily_Sharpe":0.0071},{"Stock":"TECHM.NS","Annual_Return_Pct":8.61,"Annual_Risk_Pct":27.28,"Sharpe_Ratio":0.096,"Risk_Return_Ratio":0.316,"Daily_Sharpe":0.006},{"Stock":"BRITANNIA.NS","Annual_Return_Pct":7.85,"Annual_Risk_Pct":20.38,"Sharpe_Ratio":0.091,"Risk_Return_Ratio":0.385,"Daily_Sharpe":0.0057},{"Stock":"DRREDDY.NS","Annual_Return_Pct":7.43,"Annual_Risk_Pct":21.67,"Sharpe_Ratio":0.066,"Risk_Return_Ratio":0.343,"Daily_Sharpe":0.0042},{"Stock":"HCLTECH.NS","Annual_Return_Pct":5.46,"Annual_Risk_Pct":25.13,"Sharpe_Ratio":-0.022,"Risk_Return_Ratio":0.217,"Daily_Sharpe":-0.0014},{"Stock":"KOTAKBANK.NS","Annual_Return_Pct":4.18,"Annual_Risk_Pct":22.79,"Sharpe_Ratio":-0.08,"Risk_Return_Ratio":0.183,"Daily_Sharpe":-0.005},{"Stock":"RELIANCE.NS","Annual_Return_Pct":2.08,"Annual_Risk_Pct":22.28,"Sharpe_Ratio":-0.176,"Risk_Return_Ratio":0.093,"Daily_Sharpe":-0.0111},{"Stock":"HDFCBANK.NS","Annual_Return_Pct":0.95,"Annual_Risk_Pct":21.08,"Sharpe_Ratio":-0.239,"Risk_Return_Ratio":0.045,"Daily_Sharpe":-0.0151},{"Stock":"INFY.NS","Annual_Return_Pct":-4.48,"Annual_Risk_Pct":26.12,"Sharpe_Ratio":-0.401,"Risk_Return_Ratio":-0.172,"Daily_Sharpe":-0.0253},{"Stock":"HINDUNILVR.NS","Annual_Return_Pct":-3.52,"Annual_Risk_Pct":20.54,"Sharpe_Ratio":-0.464,"Risk_Return_Ratio":-0.172,"Daily_Sharpe":-0.0292},{"Stock":"TCS.NS","Annual_Return_Pct":-7.27,"Annual_Risk_Pct":22.64,"Sharpe_Ratio":-0.586,"Risk_Return_Ratio":-0.321,"Daily_Sharpe":-0.0369},{"Stock":"WIPRO.NS","Annual_Return_Pct":-9.47,"Annual_Risk_Pct":25.48,"Sharpe_Ratio":-0.607,"Risk_Return_Ratio":-0.372,"Daily_Sharpe":-0.0382},{"Stock":"TCS.BO","Annual_Return_Pct":-7.73,"Annual_Risk_Pct":22.49,"Sharpe_Ratio":-0.61,"Risk_Return_Ratio":-0.344,"Daily_Sharpe":-0.0384}],"3yr":[{"Stock":"DIVISLAB.NS","Annual_Return_Pct":34.8,"Annual_Risk_Pct":25.21,"Sharpe_Ratio":1.142,"Risk_Return_Ratio":1.38,"Daily_Sharpe":0.072},{"Stock":"BAJAJ.AUTO.NS","Annual_Return_Pct":28.72,"Annual_Risk_Pct":25.74,"Sharpe_Ratio":0.883,"Risk_Return_Ratio":1.116,"Daily_Sharpe":0.0556},{"Stock":"HINDALCO.NS","Annual_Return_Pct":28.61,"Annual_Risk_Pct":29.14,"Sharpe_Ratio":0.776,"Risk_Return_Ratio":0.982,"Daily_Sharpe":0.0489},{"Stock":"BPCL.NS","Annual_Return_Pct":29.4,"Annual_Risk_Pct":30.96,"Sharpe_Ratio":0.756,"Risk_Return_Ratio":0.95,"Daily_Sharpe":0.0476},{"Stock":"HEROMOTOCO.NS","Annual_Return_Pct":25.55,"Annual_Risk_Pct":26.2,"Sharpe_Ratio":0.746,"Risk_Return_Ratio":0.975,"Daily_Sharpe":0.047},{"Stock":"M.M.NS","Annual_Return_Pct":26.77,"Annual_Risk_Pct":28.89,"Sharpe_Ratio":0.719,"Risk_Return_Ratio":0.927,"Daily_Sharpe":0.0453},{"Stock":"SBIN.NS","Annual_Return_Pct":21.77,"Annual_Risk_Pct":24.46,"Sharpe_Ratio":0.644,"Risk_Return_Ratio":0.89,"Daily_Sharpe":0.0406},{"Stock":"SUNPHARMA.NS","Annual_Return_Pct":18.63,"Annual_Risk_Pct":19.68,"Sharpe_Ratio":0.642,"Risk_Return_Ratio":0.947,"Daily_Sharpe":0.0404},{"Stock":"IOC.NS","Annual_Return_Pct":23.93,"Annual_Risk_Pct":30.35,"Sharpe_Ratio":0.591,"Risk_Return_Ratio":0.788,"Daily_Sharpe":0.0372},{"Stock":"JSWSTEEL.NS","Annual_Return_Pct":20.37,"Annual_Risk_Pct":24.75,"Sharpe_Ratio":0.581,"Risk_Return_Ratio":0.823,"Daily_Sharpe":0.0366},{"Stock":"ICICIBANK.NS","Annual_Return_Pct":14.67,"Annual_Risk_Pct":19.18,"Sharpe_Ratio":0.452,"Risk_Return_Ratio":0.765,"Daily_Sharpe":0.0285},{"Stock":"TATASTEEL.NS","Annual_Return_Pct":18.53,"Annual_Risk_Pct":27.91,"Sharpe_Ratio":0.449,"Risk_Return_Ratio":0.664,"Daily_Sharpe":0.0283},{"Stock":"ONGC.NS","Annual_Return_Pct":16.84,"Annual_Risk_Pct":29.23,"Sharpe_Ratio":0.371,"Risk_Return_Ratio":0.576,"Daily_Sharpe":0.0234},{"Stock":"TECHM.NS","Annual_Return_Pct":14.69,"Annual_Risk_Pct":26.24,"Sharpe_Ratio":0.331,"Risk_Return_Ratio":0.56,"Daily_Sharpe":0.0209},{"Stock":"LT.NS","Annual_Return_Pct":11.03,"Annual_Risk_Pct":25.64,"Sharpe_Ratio":0.196,"Risk_Return_Ratio":0.43,"Daily_Sharpe":0.0123},{"Stock":"ADANIENT.NS","Annual_Return_Pct":13.55,"Annual_Risk_Pct":39.79,"Sharpe_Ratio":0.19,"Risk_Return_Ratio":0.341,"Daily_Sharpe":0.012},{"Stock":"BAJFINANCE.NS","Annual_Return_Pct":10.9,"Annual_Risk_Pct":27.72,"Sharpe_Ratio":0.177,"Risk_Return_Ratio":0.393,"Daily_Sharpe":0.0111},{"Stock":"AXISBANK.NS","Annual_Return_Pct":9.92,"Annual_Risk_Pct":23.82,"Sharpe_Ratio":0.164,"Risk_Return_Ratio":0.416,"Daily_Sharpe":0.0104},{"Stock":"KOTAKBANK.NS","Annual_Return_Pct":9.2,"Annual_Risk_Pct":22.51,"Sharpe_Ratio":0.142,"Risk_Return_Ratio":0.409,"Daily_Sharpe":0.009},{"Stock":"CIPLA.NS","Annual_Return_Pct":8.43,"Annual_Risk_Pct":22.96,"Sharpe_Ratio":0.106,"Risk_Return_Ratio":0.367,"Daily_Sharpe":0.0067},{"Stock":"NESTLEIND.NS","Annual_Return_Pct":7.44,"Annual_Risk_Pct":19.99,"Sharpe_Ratio":0.072,"Risk_Return_Ratio":0.372,"Daily_Sharpe":0.0045},{"Stock":"MARUTI.NS","Annual_Return_Pct":7.62,"Annual_Risk_Pct":22.6,"Sharpe_Ratio":0.072,"Risk_Return_Ratio":0.337,"Daily_Sharpe":0.0045},{"Stock":"MARUTI.BO","Annual_Return_Pct":7.62,"Annual_Risk_Pct":22.63,"Sharpe_Ratio":0.072,"Risk_Return_Ratio":0.337,"Daily_Sharpe":0.0045},{"Stock":"HCLTECH.NS","Annual_Return_Pct":6.16,"Annual_Risk_Pct":26.17,"Sharpe_Ratio":0.006,"Risk_Return_Ratio":0.235,"Daily_Sharpe":0.0004},{"Stock":"DRREDDY.NS","Annual_Return_Pct":6.09,"Annual_Risk_Pct":21.77,"Sharpe_Ratio":0.004,"Risk_Return_Ratio":0.28,"Daily_Sharpe":0.0003},{"Stock":"BRITANNIA.NS","Annual_Return_Pct":5.28,"Annual_Risk_Pct":19.98,"Sharpe_Ratio":-0.036,"Risk_Return_Ratio":0.264,"Daily_Sharpe":-0.0023},{"Stock":"RELIANCE.NS","Annual_Return_Pct":3.73,"Annual_Risk_Pct":21.14,"Sharpe_Ratio":-0.107,"Risk_Return_Ratio":0.177,"Daily_Sharpe":-0.0068},{"Stock":"HDFCBANK.NS","Annual_Return_Pct":1.08,"Annual_Risk_Pct":20.4,"Sharpe_Ratio":-0.241,"Risk_Return_Ratio":0.053,"Daily_Sharpe":-0.0152},{"Stock":"WIPRO.NS","Annual_Return_Pct":-1.42,"Annual_Risk_Pct":26.66,"Sharpe_Ratio":-0.278,"Risk_Return_Ratio":-0.053,"Daily_Sharpe":-0.0175},{"Stock":"INFY.NS","Annual_Return_Pct":-5.9,"Annual_Risk_Pct":26.44,"Sharpe_Ratio":-0.45,"Risk_Return_Ratio":-0.223,"Daily_Sharpe":-0.0283},{"Stock":"HINDUNILVR.NS","Annual_Return_Pct":-6.68,"Annual_Risk_Pct":20.23,"Sharpe_Ratio":-0.627,"Risk_Return_Ratio":-0.33,"Daily_Sharpe":-0.0395},{"Stock":"TCS.NS","Annual_Return_Pct":-12.6,"Annual_Risk_Pct":23.72,"Sharpe_Ratio":-0.784,"Risk_Return_Ratio":-0.531,"Daily_Sharpe":-0.0494},{"Stock":"TCS.BO","Annual_Return_Pct":-13.34,"Annual_Risk_Pct":23.54,"Sharpe_Ratio":-0.822,"Risk_Return_Ratio":-0.567,"Daily_Sharpe":-0.0518},{"Stock":"ITC.NS","Annual_Return_Pct":-9.87,"Annual_Risk_Pct":18.89,"Sharpe_Ratio":-0.84,"Risk_Return_Ratio":-0.523,"Daily_Sharpe":-0.0529}],"1yr":[{"Stock":"DIVISLAB.NS","Annual_Return_Pct":45.17,"Annual_Risk_Pct":23.55,"Sharpe_Ratio":1.663,"Risk_Return_Ratio":1.918,"Daily_Sharpe":0.1048},{"Stock":"HINDALCO.NS","Annual_Return_Pct":25.26,"Annual_Risk_Pct":28.83,"Sharpe_Ratio":0.668,"Risk_Return_Ratio":0.876,"Daily_Sharpe":0.0421},{"Stock":"BAJAJ.AUTO.NS","Annual_Return_Pct":16.43,"Annual_Risk_Pct":23.93,"Sharpe_Ratio":0.436,"Risk_Return_Ratio":0.687,"Daily_Sharpe":0.0275},{"Stock":"SBIN.NS","Annual_Return_Pct":15.11,"Annual_Risk_Pct":23.59,"Sharpe_Ratio":0.386,"Risk_Return_Ratio":0.64,"Daily_Sharpe":0.0243},{"Stock":"ADANIENT.NS","Annual_Return_Pct":18.86,"Annual_Risk_Pct":36.43,"Sharpe_Ratio":0.353,"Risk_Return_Ratio":0.518,"Daily_Sharpe":0.0222},{"Stock":"NESTLEIND.NS","Annual_Return_Pct":13.12,"Annual_Risk_Pct":20.65,"Sharpe_Ratio":0.345,"Risk_Return_Ratio":0.635,"Daily_Sharpe":0.0217},{"Stock":"TECHM.NS","Annual_Return_Pct":14.16,"Annual_Risk_Pct":27.52,"Sharpe_Ratio":0.297,"Risk_Return_Ratio":0.515,"Daily_Sharpe":0.0187},{"Stock":"SUNPHARMA.NS","Annual_Return_Pct":10.37,"Annual_Risk_Pct":19.47,"Sharpe_Ratio":0.225,"Risk_Return_Ratio":0.533,"Daily_Sharpe":0.0141},{"Stock":"JSWSTEEL.NS","Annual_Return_Pct":10.19,"Annual_Risk_Pct":23.99,"Sharpe_Ratio":0.174,"Risk_Return_Ratio":0.425,"Daily_Sharpe":0.011},{"Stock":"TATASTEEL.NS","Annual_Return_Pct":9.41,"Annual_Risk_Pct":26.05,"Sharpe_Ratio":0.131,"Risk_Return_Ratio":0.361,"Daily_Sharpe":0.0083},{"Stock":"AXISBANK.NS","Annual_Return_Pct":6.1,"Annual_Risk_Pct":24.55,"Sharpe_Ratio":0.004,"Risk_Return_Ratio":0.248,"Daily_Sharpe":0.0002},{"Stock":"LT.NS","Annual_Return_Pct":4.73,"Annual_Risk_Pct":25.25,"Sharpe_Ratio":-0.05,"Risk_Return_Ratio":0.187,"Daily_Sharpe":-0.0032},{"Stock":"BAJFINANCE.NS","Annual_Return_Pct":0.58,"Annual_Risk_Pct":30.93,"Sharpe_Ratio":-0.175,"Risk_Return_Ratio":0.019,"Daily_Sharpe":-0.011},{"Stock":"DRREDDY.NS","Annual_Return_Pct":-0.37,"Annual_Risk_Pct":23.76,"Sharpe_Ratio":-0.268,"Risk_Return_Ratio":-0.016,"Daily_Sharpe":-0.0169},{"Stock":"ONGC.NS","Annual_Return_Pct":-0.75,"Annual_Risk_Pct":24.0,"Sharpe_Ratio":-0.281,"Risk_Return_Ratio":-0.031,"Daily_Sharpe":-0.0177},{"Stock":"KOTAKBANK.NS","Annual_Return_Pct":0.08,"Annual_Risk_Pct":20.96,"Sharpe_Ratio":-0.282,"Risk_Return_Ratio":0.004,"Daily_Sharpe":-0.0178},{"Stock":"ICICIBANK.NS","Annual_Return_Pct":-0.54,"Annual_Risk_Pct":19.67,"Sharpe_Ratio":-0.332,"Risk_Return_Ratio":-0.027,"Daily_Sharpe":-0.0209},{"Stock":"HEROMOTOCO.NS","Annual_Return_Pct":-3.12,"Annual_Risk_Pct":26.39,"Sharpe_Ratio":-0.346,"Risk_Return_Ratio":-0.118,"Daily_Sharpe":-0.0218},{"Stock":"BPCL.NS","Annual_Return_Pct":-5.14,"Annual_Risk_Pct":29.55,"Sharpe_Ratio":-0.377,"Risk_Return_Ratio":-0.174,"Daily_Sharpe":-0.0237},{"Stock":"HCLTECH.NS","Annual_Return_Pct":-9.22,"Annual_Risk_Pct":29.16,"Sharpe_Ratio":-0.522,"Risk_Return_Ratio":-0.316,"Daily_Sharpe":-0.0329},{"Stock":"IOC.NS","Annual_Return_Pct":-8.46,"Annual_Risk_Pct":26.39,"Sharpe_Ratio":-0.548,"Risk_Return_Ratio":-0.32,"Daily_Sharpe":-0.0345},{"Stock":"CIPLA.NS","Annual_Return_Pct":-9.65,"Annual_Risk_Pct":21.11,"Sharpe_Ratio":-0.741,"Risk_Return_Ratio":-0.457,"Daily_Sharpe":-0.0467},{"Stock":"M.M.NS","Annual_Return_Pct":-15.94,"Annual_Risk_Pct":26.67,"Sharpe_Ratio":-0.823,"Risk_Return_Ratio":-0.598,"Daily_Sharpe":-0.0518},{"Stock":"RELIANCE.NS","Annual_Return_Pct":-13.16,"Annual_Risk_Pct":21.0,"Sharpe_Ratio":-0.912,"Risk_Return_Ratio":-0.627,"Daily_Sharpe":-0.0575},{"Stock":"INFY.NS","Annual_Return_Pct":-28.2,"Annual_Risk_Pct":30.4,"Sharpe_Ratio":-1.125,"Risk_Return_Ratio":-0.927,"Daily_Sharpe":-0.0709},{"Stock":"TCS.NS","Annual_Return_Pct":-26.69,"Annual_Risk_Pct":28.48,"Sharpe_Ratio":-1.148,"Risk_Return_Ratio":-0.937,"Daily_Sharpe":-0.0723},{"Stock":"TCS.BO","Annual_Return_Pct":-28.97,"Annual_Risk_Pct":27.96,"Sharpe_Ratio":-1.251,"Risk_Return_Ratio":-1.036,"Daily_Sharpe":-0.0788},{"Stock":"BRITANNIA.NS","Annual_Return_Pct":-18.01,"Annual_Risk_Pct":19.2,"Sharpe_Ratio":-1.251,"Risk_Return_Ratio":-0.938,"Daily_Sharpe":-0.0788},{"Stock":"MARUTI.NS","Annual_Return_Pct":-30.36,"Annual_Risk_Pct":23.8,"Sharpe_Ratio":-1.528,"Risk_Return_Ratio":-1.276,"Daily_Sharpe":-0.0963},{"Stock":"MARUTI.BO","Annual_Return_Pct":-30.46,"Annual_Risk_Pct":23.69,"Sharpe_Ratio":-1.539,"Risk_Return_Ratio":-1.286,"Daily_Sharpe":-0.097},{"Stock":"HINDUNILVR.NS","Annual_Return_Pct":-27.95,"Annual_Risk_Pct":21.84,"Sharpe_Ratio":-1.555,"Risk_Return_Ratio":-1.28,"Daily_Sharpe":-0.0979},{"Stock":"WIPRO.NS","Annual_Return_Pct":-34.62,"Annual_Risk_Pct":25.32,"Sharpe_Ratio":-1.604,"Risk_Return_Ratio":-1.367,"Daily_Sharpe":-0.1011},{"Stock":"HDFCBANK.NS","Annual_Return_Pct":-29.95,"Annual_Risk_Pct":21.85,"Sharpe_Ratio":-1.645,"Risk_Return_Ratio":-1.37,"Daily_Sharpe":-0.1036},{"Stock":"ITC.NS","Annual_Return_Pct":-33.41,"Annual_Risk_Pct":21.45,"Sharpe_Ratio":-1.837,"Risk_Return_Ratio":-1.557,"Daily_Sharpe":-0.1157}]},"sectors":{"HDFCBANK.NS":"Banking","ICICIBANK.NS":"Banking","SBIN.NS":"Banking","KOTAKBANK.NS":"Banking","AXISBANK.NS":"Banking","TCS.NS":"IT","INFY.NS":"IT","WIPRO.NS":"IT","HCLTECH.NS":"IT","TECHM.NS":"IT","RELIANCE.NS":"Energy","ONGC.NS":"Energy","BPCL.NS":"Energy","IOC.NS":"Energy","HINDUNILVR.NS":"FMCG","ITC.NS":"FMCG","NESTLEIND.NS":"FMCG","BRITANNIA.NS":"FMCG","SUNPHARMA.NS":"Pharma","DRREDDY.NS":"Pharma","CIPLA.NS":"Pharma","DIVISLAB.NS":"Pharma","MARUTI.NS":"Auto","M&M.NS":"Auto","BAJAJ.AUTO.NS":"Auto","HEROMOTOCO.NS":"Auto","TATASTEEL.NS":"Metals","JSWSTEEL.NS":"Metals","HINDALCO.NS":"Metals","LT.NS":"Others","BAJFINANCE.NS":"Banking","ADANIENT.NS":"Others"},"riskFree":6,"stockCount":34,"periods":["10yr","5yr","3yr","1yr"]};
+const PERIOD_LABELS = {ten:"10 Year", "10yr":"10 Year","5yr":"5 Year","3yr":"3 Year","1yr":"1 Year"};
+const PERIODS = ["10yr","5yr","3yr","1yr"];
+let selectedPeriod="3yr", selectedStock=null;
+let charts={};
+
+function fmtPct(v){return Number(v).toFixed(2)+"%"}
+function fmtNum(v,d=3){return Number(v).toFixed(d)}
+function stockName(s){return String(s).replace(".NS","")}
+function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id]}}
+function getMetric(p){return DATA.metrics[p]}
+function getWeights(p){return DATA.weights[p]||[]}
+function getStockRows(p){return DATA.stocks[p]||[]}
+function getRow(p,s){return getStockRows(p).find(x=>x.Stock===s)}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+
+function openModal(title,body){
+  document.getElementById("modalTitle").textContent=title;
+  document.getElementById("modalBody").innerHTML=body||"";
+  document.getElementById("modal").classList.remove("hide");
+}
+function closeModal(){document.getElementById("modal").classList.add("hide")}
+
+function init(){
+  buildHero();
+  buildPeriodButtons();
+  buildPeriodControls();
+  buildRiskCards();
+  buildMethodFlow();
+  buildViva();
+  updateAll();
+  bindGlobal();
+}
+function buildHero(){
+  const best=PERIODS.reduce((a,b)=>getMetric(a).Sharpe>getMetric(b).Sharpe?a:b);
+  const low=PERIODS.reduce((a,b)=>getMetric(a).Risk<getMetric(b).Risk?a:b);
+  const high=PERIODS.reduce((a,b)=>getMetric(a).Return>getMetric(b).Return?a:b);
+  const cards=[
+    ["Best Sharpe",fmtNum(getMetric(best).Sharpe),"3-year historical result"],
+    ["Best Return",fmtPct(getMetric(high).Return),PERIOD_LABELS[high]],
+    ["Lowest Risk",fmtPct(getMetric(low).Risk),PERIOD_LABELS[low]],
+    ["Stocks",DATA.stockCount,"Universe"],
+    ["Risk-free",fmtPct(DATA.riskFree),"Sharpe input"],
+    ["Horizons",PERIODS.length,"10Y / 5Y / 3Y / 1Y"]
+  ];
+  document.getElementById("heroKpis").innerHTML=cards.map(c=>`<div class="kpi"><div class="v">${c[1]}</div><div class="l">${c[0]} • ${c[2]}</div></div>`).join("");
+}
+function buildPeriodButtons(){
+  document.getElementById("periodBtns").innerHTML=PERIODS.map(p=>`<button class="period-btn ${p===selectedPeriod?'active':''}" data-p="${p}">${PERIOD_LABELS[p]}</button>`).join("");
+  document.querySelectorAll(".period-btn").forEach(b=>b.addEventListener("click",()=>{selectedPeriod=b.dataset.p;syncPeriodControls();updateAll()}));
+}
+function buildPeriodControls(){
+  const opts=PERIODS.map(p=>`<option value="${p}">${PERIOD_LABELS[p]}</option>`).join("");
+  document.getElementById("stockPeriod").innerHTML=opts;
+  document.getElementById("stockPeriod").value=selectedPeriod;
+  document.getElementById("weightStock").innerHTML=`<option value="all">All stocks</option>`+Object.keys(DATA.sectors).sort().map(s=>`<option value="${s}">${stockName(s)}</option>`).join("");
+  document.getElementById("sectorSelect").innerHTML=`<option value="all">All sectors</option>`+[...new Set(Object.values(DATA.sectors))].sort().map(s=>`<option>${s}</option>`).join("");
+  document.getElementById("stockPeriod").addEventListener("change",e=>{selectedPeriod=e.target.value;syncPeriodControls();updateAll()});
+  document.getElementById("weightStock").addEventListener("change",()=>{selectedStock=document.getElementById("weightStock").value==="all"?null:document.getElementById("weightStock").value;renderWeights()});
+  document.getElementById("weightView").addEventListener("change",renderWeights);
+  document.getElementById("weightFilter").addEventListener("change",renderWeights);
+  document.getElementById("weightTop").addEventListener("change",renderWeights);
+  document.getElementById("resetWeight").addEventListener("click",()=>{document.getElementById("weightView").value="grouped";document.getElementById("weightFilter").value="nonzero";document.getElementById("weightTop").value="all";document.getElementById("weightStock").value="all";selectedStock=null;renderWeights()});
+  document.getElementById("stockSelect").addEventListener("change",e=>{selectedStock=e.target.value;renderStockDetail()});
+  document.getElementById("sectorSelect").addEventListener("change",renderStockArea);
+  document.getElementById("stockSearch").addEventListener("input",renderStockArea);
+  document.getElementById("comparisonChartType").addEventListener("change",renderComparisonCharts);
+}
+function syncPeriodControls(){
+  document.querySelectorAll(".period-btn").forEach(b=>b.classList.toggle("active",b.dataset.p===selectedPeriod));
+  document.getElementById("stockPeriod").value=selectedPeriod;
+}
+function updateAll(){
+  renderMetrics(); renderComparisonCharts(); renderWeights(); renderStockArea(); renderComposition(); renderRiskInsights(); renderRecommendation(); renderComparisonTable();
+}
+function renderMetrics(){
+  const m=getMetric(selectedPeriod);
+  const cards=[
+    ["Expected Return",fmtPct(m.Return),"Annualized historical estimate","good"],
+    ["Portfolio Risk",fmtPct(m.Risk),"Annualized volatility","warn"],
+    ["Sharpe Ratio",fmtNum(m.Sharpe),"Risk-adjusted performance","good"],
+    ["Excess Return",fmtPct(m.Return-DATA.riskFree),"Return − risk-free rate",""],
+  ];
+  document.getElementById("metricCards").innerHTML=cards.map(c=>`<div class="card metric"><div><div class="muted small">${c[0]}</div><div class="num ${c[3]}">${c[1]}</div><div class="muted tiny">${c[2]}</div></div><span class="tag">${PERIOD_LABELS[selectedPeriod]}</span></div>`).join("");
+}
+function renderComparisonCharts(){
+  const type=document.getElementById("comparisonChartType").value.toLowerCase();
+  const labels=PERIODS.map(p=>PERIOD_LABELS[p]);
+  destroyChart("return"); destroyChart("riskSharpe");
+  charts.return=new Chart(document.getElementById("returnChart"),{type,data:{labels,datasets:[{label:"Expected Return",data:PERIODS.map(p=>getMetric(p).Return),backgroundColor:"#2563eb",borderColor:"#2563eb",borderWidth:2,tension:.3}]},options:chartOptions("%",true)});
+  charts.riskSharpe=new Chart(document.getElementById("riskSharpeChart"),{type,data:{labels,datasets:[{label:"Risk %",data:PERIODS.map(p=>getMetric(p).Risk),backgroundColor:"#f59e0b",borderColor:"#f59e0b",borderWidth:2,tension:.3},{label:"Sharpe",data:PERIODS.map(p=>getMetric(p).Sharpe),backgroundColor:"#059669",borderColor:"#059669",borderWidth:2,tension:.3,yAxisID:"y1"}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false},plugins:{legend:{labels:{color:getComputedStyle(document.body).color}}},scales:{x:{ticks:{color:"#64748b"}},y:{title:{display:true,text:"Risk (%)"},ticks:{color:"#64748b"}},y1:{position:"right",grid:{drawOnChartArea:false},title:{display:true,text:"Sharpe"},ticks:{color:"#64748b"}}}}});
+}
+function chartOptions(unit="%"){
+ return {responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${Number(c.raw).toFixed(2)}${unit}`}}},scales:{x:{ticks:{color:"#64748b"}},y:{ticks:{color:"#64748b",callback:v=>v+unit},beginAtZero:true}}}
+}
+function renderWeights(){
+  const view=document.getElementById("weightView").value;
+  if(view==="heatmap"){document.getElementById("weightVisual").innerHTML='<div id="heatmapMain"></div>'; renderHeatmapMain(); return}
+  if(view==="table"){document.getElementById("weightVisual").innerHTML='<div class="table-scroll" style="height:100%"><table id="weightTable"></table></div>'; renderWeightTable(); return}
+  document.getElementById("weightVisual").innerHTML='<canvas id="weightChart"></canvas>';
+  const filter=document.getElementById("weightFilter").value;
+  const top=document.getElementById("weightTop").value;
+  let stocks=[...new Set(PERIODS.flatMap(p=>getWeights(p).map(x=>x.Stock)))];
+  if(filter==="nonzero") stocks=stocks.filter(s=>PERIODS.some(p=>(getWeights(p).find(x=>x.Stock===s)?.Weight||0)>0));
+  stocks.sort((a,b)=>Math.max(...PERIODS.map(p=>getWeights(p).find(x=>x.Stock===b)?.Weight||0))-Math.max(...PERIODS.map(p=>getWeights(p).find(x=>x.Stock===a)?.Weight||0)));
+  if(top!=="all") stocks=stocks.slice(0,Number(top));
+  destroyChart("weight");
+  const datasets=PERIODS.map((p,i)=>({label:PERIOD_LABELS[p],data:stocks.map(s=>(getWeights(p).find(x=>x.Stock===s)?.Weight||0)*100),backgroundColor:["#2563eb","#059669","#d97706","#7c3aed"][i],borderWidth:0}));
+  charts.weight=new Chart(document.getElementById("weightChart"),{type:view==="stacked"?"bar":"bar",data:{labels:stocks.map(stockName),datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom"}},scales:{x:{stacked:view==="stacked",ticks:{color:"#64748b",maxRotation:45,minRotation:0}},y:{stacked:view==="stacked",beginAtZero:true,ticks:{color:"#64748b",callback:v=>v+"%"}}},onClick:(evt,els)=>{if(els.length){const idx=els[0].index; selectedStock=stocks[idx]; document.getElementById("weightStock").value=selectedStock; renderStockWeightDetail()}}}});
+  renderStockWeightDetail(); renderHeatmap();
+}
+function renderStockWeightDetail(){
+  const s=selectedStock||document.getElementById("weightStock").value;
+  const holder=document.getElementById("weightDetail");
+  if(!s || s==="all"){holder.innerHTML='<div class="muted small">Select a stock or click a bar to inspect its allocation across all horizons.</div>'; destroyChart("stockWeight"); return}
+  const vals=PERIODS.map(p=>getWeights(p).find(x=>x.Stock===s)?.Weight||0);
+  holder.innerHTML=`<strong>${esc(stockName(s))}</strong><div class="legend">${PERIODS.map((p,i)=>`<span><i class="dot" style="background:${["#2563eb","#059669","#d97706","#7c3aed"][i]}"></i>${PERIOD_LABELS[p]}: ${fmtPct(vals[i]*100)}</span>`).join("")}</div>`;
+  destroyChart("stockWeight");
+  charts.stockWeight=new Chart(document.getElementById("stockWeightChart"),{type:"line",data:{labels:PERIODS.map(p=>PERIOD_LABELS[p]),datasets:[{label:stockName(s)+" weight",data:vals.map(v=>v*100),borderColor:"#2563eb",backgroundColor:"rgba(37,99,235,.12)",fill:true,tension:.25}]},options:chartOptions("%")});
+}
+function renderHeatmapMain(){
+  const holder=document.getElementById("heatmapMain");
+  const stocks=[...new Set(PERIODS.flatMap(p=>getWeights(p).map(x=>x.Stock)))].sort();
+  holder.innerHTML=`<div class="heat">${["Stock",...PERIODS.map(p=>PERIOD_LABELS[p])].map(x=>`<div class="head">${x}</div>`).join("")}${stocks.map(s=>`<div>${stockName(s)}</div>${PERIODS.map(p=>{const w=getWeights(p).find(x=>x.Stock===s)?.Weight||0;const alpha=Math.min(.85,w*2.2);return `<div class="cell" style="background:rgba(37,99,235,${alpha})" data-stock="${s}" data-period="${p}">${fmtPct(w*100)}</div>`}).join("")}`).join("")}</div>`;
+  holder.querySelectorAll(".cell").forEach(c=>c.addEventListener("click",()=>{const s=c.dataset.stock,p=c.dataset.period;selectedStock=s;document.getElementById("weightStock").value=s;openModal(`${stockName(s)} • ${PERIOD_LABELS[p]}`,`<p><strong>Portfolio weight:</strong> ${fmtPct((getWeights(p).find(x=>x.Stock===s)?.Weight||0)*100)}</p><p><strong>Interpretation:</strong> This is the optimized allocation stored in the supplied portfolio-weight output for the selected horizon.</p>`);renderStockWeightDetail()}));
+}
+function renderHeatmap(){
+ const stocks=[...new Set(PERIODS.flatMap(p=>getWeights(p).map(x=>x.Stock)))].sort();
+ const header='<div class="heat"><div class="head">Stock</div>'+PERIODS.map(p=>`<div class="head">${PERIOD_LABELS[p]}</div>`).join("");
+ const body=stocks.map(s=>{
+   const cells=PERIODS.map(p=>{
+     const w=getWeights(p).find(x=>x.Stock===s)?.Weight||0;
+     const alpha=Math.min(.85,w*2.2);
+     return `<div class="cell" style="background:rgba(37,99,235,${alpha})" onclick="selectHeat('${s}','${p}')">${fmtPct(w*100)}</div>`;
+   }).join("");
+   return `<div>${stockName(s)}</div>${cells}`;
+ }).join("");
+ document.getElementById("heatmap").innerHTML=header+body+'</div>';
+}
+function selectHeat(s,p){selectedStock=s;document.getElementById("weightStock").value=s;openModal(`${stockName(s)} • ${PERIOD_LABELS[p]}`,`<p><strong>Weight:</strong> ${fmtPct((getWeights(p).find(x=>x.Stock===s)?.Weight||0)*100)}</p><p>This value is directly derived from the supplied optimized-weight output.</p>`);renderStockWeightDetail()}
+function renderWeightTable(){
+ const tbl=document.getElementById("weightTable");const stocks=[...new Set(PERIODS.flatMap(p=>getWeights(p).map(x=>x.Stock)))].sort();
+ tbl.innerHTML='<thead><tr><th>Stock</th>'+PERIODS.map(p=>`<th>${PERIOD_LABELS[p]}</th>`).join("")+'</tr></thead><tbody>'+stocks.map(s=>`<tr><td>${stockName(s)}</td>${PERIODS.map(p=>`<td>${fmtPct((getWeights(p).find(x=>x.Stock===s)?.Weight||0)*100)}</td>`).join("")}</tr>`).join("")+'</tbody>';
+}
+function renderStockArea(){
+ const p=document.getElementById("stockPeriod").value; selectedPeriod=p;
+ const sector=document.getElementById("sectorSelect").value;const q=document.getElementById("stockSearch").value.toLowerCase();
+ let rows=getStockRows(p).filter(r=>(sector==="all"||DATA.sectors[r.Stock]===sector)&&(!q||r.Stock.toLowerCase().includes(q)));
+ const opts=rows.map(r=>`<option value="${r.Stock}">${stockName(r.Stock)}</option>`).join("");
+ const ss=document.getElementById("stockSelect");
+ if(!selectedStock||!rows.some(r=>r.Stock===selectedStock)) selectedStock=rows[0]?.Stock||null;
+ ss.innerHTML=opts;ss.value=selectedStock||"";
+ const best=rows.reduce((a,b)=>a.Sharpe_Ratio>b.Sharpe_Ratio?a:b,rows[0]);
+ const low=rows.reduce((a,b)=>a.Annual_Risk_Pct<b.Annual_Risk_Pct?a:b,rows[0]);
+ const high=rows.reduce((a,b)=>a.Annual_Return_Pct>b.Annual_Return_Pct?a:b,rows[0]);
+ document.getElementById("stockCards").innerHTML=rows.length?[
+  ["Highest Sharpe",best?.Stock, best?fmtNum(best.Sharpe_Ratio):"—"],
+  ["Highest Return",high?.Stock, high?fmtPct(high.Annual_Return_Pct):"—"],
+  ["Lowest Risk",low?.Stock, low?fmtPct(low.Annual_Risk_Pct):"—"],
+  ["Selected Stock",selectedStock?stockName(selectedStock):"—",selectedStock?fmtNum(getRow(p,selectedStock)?.Sharpe_Ratio||0):"—"]
+ ].map(c=>`<div class="card"><div class="muted small">${c[0]}</div><h3>${esc(stockName(c[1]||"—"))}</h3><strong>${c[2]}</strong></div>`).join(""):"<div class='card'>No matching stocks.</div>";
+ renderScatter(rows);renderRankTable(rows);renderStockDetail();
+}
+function renderStockDetail(){
+ const p=document.getElementById("stockPeriod").value;const r=getRow(p,selectedStock);
+ if(!r){document.getElementById("stockCards").innerHTML="";return}
+ document.getElementById("stockCards").insertAdjacentHTML("beforeend",`<div class="card"><div class="muted small">Selected stock detail</div><h3>${stockName(r.Stock)}</h3><div class="legend"><span>Return ${fmtPct(r.Annual_Return_Pct)}</span><span>Risk ${fmtPct(r.Annual_Risk_Pct)}</span><span>Sharpe ${fmtNum(r.Sharpe_Ratio)}</span><span>R/R ${fmtNum(r.Risk_Return_Ratio)}</span></div></div>`);
+}
+function renderScatter(rows){
+ destroyChart("scatter");
+ charts.scatter=new Chart(document.getElementById("scatterChart"),{type:"scatter",data:{datasets:[{label:PERIOD_LABELS[selectedPeriod],data:rows.map(r=>({x:r.Annual_Risk_Pct,y:r.Annual_Return_Pct,stock:r.Stock,sharpe:r.Sharpe_Ratio})),backgroundColor:"#2563eb",pointRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{tooltip:{callbacks:{label:c=>`${stockName(c.raw.stock)} • Return ${c.raw.y.toFixed(2)}% • Risk ${c.raw.x.toFixed(2)}% • Sharpe ${c.raw.sharpe.toFixed(3)}`}},legend:{display:false}},scales:{x:{title:{display:true,text:"Annualized Risk (%)"}},y:{title:{display:true,text:"Annualized Return (%)"}}},onClick:(e,els)=>{if(els.length){selectedStock=rows[els[0].index].Stock;document.getElementById("stockSelect").value=selectedStock;renderStockDetail()}}}});
+}
+function renderRankTable(rows){
+ const t=document.getElementById("rankTable");const sorted=[...rows].sort((a,b)=>b.Sharpe_Ratio-a.Sharpe_Ratio);
+ t.innerHTML='<thead><tr><th>#</th><th>Stock</th><th>Return</th><th>Risk</th><th>Sharpe</th><th>Sector</th></tr></thead><tbody>'+sorted.map((r,i)=>`<tr onclick="selectedStock='${r.Stock}';document.getElementById('stockSelect').value='${r.Stock}';renderStockDetail()"><td>${i+1}</td><td><strong>${stockName(r.Stock)}</strong></td><td>${fmtPct(r.Annual_Return_Pct)}</td><td>${fmtPct(r.Annual_Risk_Pct)}</td><td>${fmtNum(r.Sharpe_Ratio)}</td><td>${DATA.sectors[r.Stock]||"Not classified"}</td></tr>`).join("")+'</tbody>';
+}
+function renderComposition(){
+ const w=getWeights(selectedPeriod);destroyChart("donut");
+ charts.donut=new Chart(document.getElementById("donutChart"),{type:"doughnut",data:{labels:w.map(x=>stockName(x.Stock)),datasets:[{data:w.map(x=>x.Weight*100),backgroundColor:["#2563eb","#059669","#d97706","#7c3aed","#0891b2","#dc2626","#64748b"]}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"right"},tooltip:{callbacks:{label:c=>`${c.label}: ${Number(c.raw).toFixed(2)}%`}}}}});
+ const max=w[0], count=w.length, hhi=w.reduce((a,x)=>a+x.Weight*x.Weight,0);
+ document.getElementById("topHolding").innerHTML=`<div style="font-size:26px;font-weight:900">${max?stockName(max.Stock):"—"}</div><div class="muted">${max?fmtPct(max.Weight*100):"—"} allocation</div>`;
+ document.getElementById("holdingsCount").innerHTML=`<div style="font-size:30px;font-weight:900">${count}</div><div class="muted">non-zero optimized holdings</div>`;
+ document.getElementById("concentration").innerHTML=`<div style="font-size:26px;font-weight:900">${(hhi*10000).toFixed(0)}</div><div class="muted">HHI • derived from supplied weights</div>`;
+ renderChangeTable();
+}
+function renderChangeTable(){
+ const stocks=[...new Set(PERIODS.flatMap(p=>getWeights(p).map(x=>x.Stock)))];
+ const rows=stocks.map(s=>{const a=getWeights("10yr").find(x=>x.Stock===s)?.Weight||0;const b=getWeights("1yr").find(x=>x.Stock===s)?.Weight||0;return{s,a,b,d:b-a}}).filter(x=>Math.abs(x.d)>.00001).sort((a,b)=>Math.abs(b.d)-Math.abs(a.d));
+ document.getElementById("changeTable").innerHTML='<thead><tr><th>Stock</th><th>10Y</th><th>1Y</th><th>Change</th></tr></thead><tbody>'+rows.map(x=>`<tr><td>${stockName(x.s)}</td><td>${fmtPct(x.a*100)}</td><td>${fmtPct(x.b*100)}</td><td class="${x.d>0?'good':'bad'}">${x.d>0?'↑':'↓'} ${fmtPct(Math.abs(x.d)*100)}</td></tr>`).join("")+'</tbody>';
+}
+function renderRiskInsights(){
+ const risks=[
+  ["Market Risk","Broad market declines can affect multiple holdings simultaneously.","The supplied report identifies market-wide movements as a major portfolio risk."],
+  ["Sector Risk","Several holdings can respond together to sector-specific shocks.","The project spans Banking, IT, Pharma, Auto, Metals, Energy and FMCG."],
+  ["Company-Specific Risk","Unexpected company events can affect an individual holding.","The report highlights financial performance, management, competition and governance risks."],
+  ["Concentration Risk","Large weights can make portfolio performance dependent on a few stocks.","The optimized portfolios are not equally weighted; the largest historical allocation is concentrated."],
+  ["Model / Estimation Risk","Historical estimates of return, volatility and covariance may not persist.","This is especially important for shorter look-back windows."],
+  ["Liquidity / Regulatory Risk","Liquidity, policy, taxation and sector regulation can affect realized returns.","These risks are explicitly discussed in the supplied report."]
+ ];
+ document.getElementById("riskCards").innerHTML=risks.map((r,i)=>`<button class="card" style="text-align:left;color:var(--text)" onclick="openModal('${r[0]}','<p><strong>${r[1]}</strong></p><p>${r[2]}</p>')"><h3>${r[0]}</h3><p class="muted small">${r[1]}</p><span class="badge">Click for interpretation</span></button>`).join("");
+}
+function renderRecommendation(){
+ const m=getMetric(selectedPeriod);const best=PERIODS.reduce((a,b)=>getMetric(a).Sharpe>getMetric(b).Sharpe?a:b);
+ let text="";
+ if(selectedPeriod===best) text=`${PERIOD_LABELS[selectedPeriod]} has the highest historical Sharpe Ratio in the supplied portfolio metrics (${fmtNum(m.Sharpe)}). This makes it the strongest historical risk-adjusted result in this analysis.`;
+ else text=`${PERIOD_LABELS[selectedPeriod]} produced a historical Sharpe Ratio of ${fmtNum(m.Sharpe)}, with ${fmtPct(m.Return)} expected return and ${fmtPct(m.Risk)} risk. Compare it with the other horizons before interpreting the result.`;
+ document.getElementById("recommendation").innerHTML=`<strong>Analytical interpretation:</strong> ${text}<br><br><span class="muted">This is a historical optimization result, not a guarantee of future performance.</span>`;
+ const w=getWeights(best);
+ document.getElementById("bestPortfolio").innerHTML=`<div class="badge good">Highest historical Sharpe</div><h3>${PERIOD_LABELS[best]}</h3><div class="grid g3"><div><div class="muted tiny">Return</div><strong>${fmtPct(getMetric(best).Return)}</strong></div><div><div class="muted tiny">Risk</div><strong>${fmtPct(getMetric(best).Risk)}</strong></div><div><div class="muted tiny">Sharpe</div><strong>${fmtNum(getMetric(best).Sharpe)}</strong></div></div><hr style="border:0;border-top:1px solid var(--line);margin:15px 0"><div>${w.map(x=>`<span class="badge" style="margin:3px">${stockName(x.Stock)} ${fmtPct(x.Weight*100)}</span>`).join("")}</div>`;
+}
+function renderComparisonTable(){
+ const rows=PERIODS.map(p=>({p,...getMetric(p)})).sort((a,b)=>b.Sharpe-a.Sharpe);
+ document.getElementById("comparisonTable").innerHTML='<thead><tr><th>Rank</th><th>Period</th><th>Return</th><th>Risk</th><th>Sharpe</th></tr></thead><tbody>'+rows.map((r,i)=>`<tr><td>${i+1}</td><td><strong>${PERIOD_LABELS[r.p]}</strong></td><td>${fmtPct(r.Return)}</td><td>${fmtPct(r.Risk)}</td><td>${fmtNum(r.Sharpe)}</td></tr>`).join("")+'</tbody>';
+}
+function buildMethodFlow(){
+ const steps=[["01","Yahoo Finance","Historical price data"],["02","Adjusted Prices","Clean price series"],["03","Daily Returns","Discrete returns"],["04","Annualize","Return × 252; SD × √252"],["05","Sharpe","(Return − Rf) / Risk"],["06","Top 5","Highest stock Sharpe"],["07","Optimization","Maximum Sharpe"],["08","Weights","Σw=1; w≥0"],["09","Compare","10Y / 5Y / 3Y / 1Y"],["10","Interpret","Historical insights"]];
+ document.getElementById("methodFlow").innerHTML=steps.map((s,i)=>`${i?'<span class="arrow">→</span>':''}<button class="flow-step" onclick="openModal('${s[1]}','<p>${s[2]}</p>')"><strong>${s[0]}</strong><br>${s[1]}<div class="tiny muted">${s[2]}</div></button>`).join("");
+}
+function buildRiskCards(){}
+function buildViva(){
+ const qs=[
+  ["Why use the Sharpe Ratio?","It measures excess return relative to portfolio volatility, allowing risk-adjusted performance to be compared across the four historical horizons."],
+  ["Why use 252?","The analysis annualizes daily return using approximately 252 trading days in a year, matching the supplied R implementation."],
+  ["Why no short selling?","The optimization imposes non-negative weights, so every position is zero or positive and the portfolio is fully invested."],
+  ["Why compare 1, 3, 5 and 10 years?","Different look-back windows capture different historical market regimes and therefore produce different estimates of return, risk and covariance."],
+  ["Why did the weights change?","The optimizer responds to changes in historical returns, volatility and relationships among stocks when the look-back window changes."],
+  ["Why is the 3-year portfolio preferred?","It has the highest historical Sharpe Ratio among the four optimized portfolios in the supplied metrics."],
+  ["Does the optimization guarantee future performance?","No. It is based on historical estimates and future market conditions can differ substantially."],
+  ["What is a key limitation?","Model and estimation risk: historical return, volatility and covariance estimates may not persist, and concentration can increase portfolio-specific risk."]
+ ];
+ document.getElementById("vivaBox").innerHTML=qs.map((q,i)=>`<button class="viva-q" type="button">${i+1}. ${q[0]}</button><div class="viva-a">${q[1]}</div>`).join("");
+ document.querySelectorAll(".viva-q").forEach(b=>b.addEventListener("click",()=>b.classList.toggle("open")));
+}
+function bindGlobal(){
+ document.getElementById("themeBtn").addEventListener("click",()=>{const dark=document.documentElement.dataset.theme==="dark";document.documentElement.dataset.theme=dark?"":"dark";document.getElementById("themeBtn").textContent=dark?"☾":"☀";Object.values(charts).forEach(c=>c&&c.update())});
+ document.getElementById("presentBtn").addEventListener("click",()=>document.body.classList.toggle("presentation"));
+ document.getElementById("exportSummary").addEventListener("click",()=>{
+   const rows=PERIODS.map(p=>({Period:p,Expected_Return:DATA.metrics[p].Return,Risk:DATA.metrics[p].Risk,Sharpe:DATA.metrics[p].Sharpe}));
+   downloadCSV(rows,"portfolio_summary.csv");
+ });
+ document.querySelectorAll(".explain").forEach(b=>b.addEventListener("click",()=>openModal(b.dataset.title,b.dataset.text)));
+ document.getElementById("modal").addEventListener("click",e=>{if(e.target.id==="modal")closeModal()});
+ window.addEventListener("scroll",()=>{const h=document.documentElement;document.getElementById("progress").style.width=(window.scrollY/(h.scrollHeight-h.clientHeight)*100)+"%"});
+}
+function downloadCSV(rows,name){
+ if(!rows.length)return;const cols=Object.keys(rows[0]);const csv=[cols.join(","),...rows.map(r=>cols.map(c=>`"${String(r[c]??"").replaceAll('"','""')}"`).join(","))].join("\\n");
+ const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+window.selectHeat=selectHeat;window.openModal=openModal;window.closeModal=closeModal;
+window.addEventListener("load",init);
+</script>
+</body>
+</html>
